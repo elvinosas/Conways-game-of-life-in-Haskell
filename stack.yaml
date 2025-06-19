@@ -17,11 +17,11 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver:
-  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/28.yaml
+resolver: lts-22.44
 system-ghc: true
 install-ghc: false
-
+ghc-options:
+  "$everything": -O2 -threaded -rtsopts -with-rtsopts=-N
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -52,7 +52,6 @@ packages:
 # extra-package-dbs: []
 
 # Control whether we use the GHC we find on the path
-# system-ghc: true
 #
 # Require a specific version of stack, using version ranges
 # require-stack-version: -any # Default
