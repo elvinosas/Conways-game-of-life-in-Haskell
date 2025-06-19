@@ -1,24 +1,32 @@
 module Bindings (display, reshape, keyboardMouse, idle) where
 
-import Graphics.UI.GLUT
-import Display ( display, idle )
 import Data.IORef
-import Types
+import Display (display, idle)
 import Game
+import Graphics.UI.GLUT
+import Types
 
 reshape :: ReshapeCallback
-reshape s = do 
+reshape s = do
   viewport $= (Position 0 0, s)
 
-keyboardMouse :: IORef Bool -> IORef State -> KeyboardMouseCallback
-keyboardMouse run _ (Char ' ') Down _ _ = do
-  r <- get run
-  run $= not r
-  postRedisplay Nothing
-
-keyboardMouse _ state (MouseButton LeftButton) Down _ (Position x y) = do
-  s <- get state
-  state $= changeState s (fromIntegral x, fromIntegral y)
-  postRedisplay Nothing
-
-keyboardMouse _ _ _ _ _ _ = return ()
+keyboardMouse :: IORef Bool -> IORef State -> IORef Int -> KeyboardMouseCallback
+keyboardMouse run stateRef delayRef key state modifiers position =
+  case (key, state) of
+    (Char ' ', Down) -> do
+      atomicModifyIORef' run (\r -> (not r, ()))
+      postRedisplay Nothing
+    (Char 'a', Down) -> do
+      atomicModifyIORef' delayRef (\d -> (d + 50, ()))
+      postRedisplay Nothing
+    (Char 'd', Down) -> do
+      atomicModifyIORef' delayRef (\d -> (max 1 (d - 50), ()))
+      postRedisplay Nothing
+    (MouseButton LeftButton, Down) -> do
+      let (Position x y) = position
+      s <- get stateRef
+      stateRef $= changeState s (fromIntegral x, fromIntegral y)
+      postRedisplay Nothing
+    (Char 'q', Down) ->
+      leaveMainLoop
+    _ -> return ()

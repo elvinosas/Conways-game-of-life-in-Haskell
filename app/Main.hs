@@ -1,9 +1,10 @@
-import Graphics.UI.GLUT
-
-import Bindings ( keyboardMouse, reshape, display, idle, display )
-import Data.IORef (newIORef)
+import Bindings (display, keyboardMouse, reshape)
+import Control.Concurrent (forkIO, threadDelay)
+import Control.Monad (forever, when)
+import Data.IORef
 import Game
-import Types
+import Graphics.UI.GLUT
+import Text.Printf (printf)
 
 main :: IO ()
 main = do
@@ -15,10 +16,34 @@ main = do
 
   state <- newIORef ready
   isRunning <- newIORef False
+  frameCountRef <- newIORef 0
+  delayRef <- newIORef (1000 `div` 60)
 
-  keyboardMouseCallback $= Just (keyboardMouse isRunning state)
+  keyboardMouseCallback $= Just (keyboardMouse isRunning state delayRef)
 
-  idleCallback $= Just (idle state isRunning)
+  let fpsReporter = forever $ do
+        threadDelay (5 * 1000 * 1000)
+        frames <- atomicModifyIORef' frameCountRef (\currentCount -> (0, currentCount))
+        let fps = fromIntegral frames / 5.0 :: Double
+        printf "FPS: %.2f\n" fps
+
+  _ <- forkIO fpsReporter
+
+  let timerCallback = do
+        run <- readIORef isRunning
+        when run $ do
+          currentState <- readIORef state
+          newState <- process currentState
+          writeIORef state newState
+          postRedisplay Nothing
+
+        atomicModifyIORef' frameCountRef (\c -> (c + 1, ()))
+
+        currentDelay <- readIORef delayRef
+        addTimerCallback currentDelay timerCallback
+
   displayCallback $= display state
+
+  addTimerCallback 0 timerCallback
 
   mainLoop
